@@ -57,6 +57,35 @@ def load_and_merge_data():
 
     return merged_df
 
+@task
+def compute_statistics(df):
+    logger = get_run_logger()
+
+    # unify happiness score
+    df["happiness_score"] = df["Happiness score"].fillna(df["Ladder score"])
+
+    # basic stats
+    mean_val = df["happiness_score"].mean()
+    median_val = df["happiness_score"].median()
+    std_val = df["happiness_score"].std()
+
+    logger.info(f"Mean happiness score: {mean_val}")
+    logger.info(f"Median happiness score: {median_val}")
+    logger.info(f"Std happiness score: {std_val}")
+
+    # average by year
+    yearly_avg = df.groupby("year")["happiness_score"].mean()
+    logger.info(f"Average happiness by year:\n{yearly_avg}")
+
+    # average by region
+    region_avg = df.groupby("Regional indicator")["happiness_score"].mean()
+    logger.info(f"Average happiness by region:\n{region_avg}")
+
+    return {
+        "mean": mean_val,
+        "median": median_val,
+        "std": std_val
+    }
 
 @flow
 def happiness_pipeline():
@@ -64,8 +93,10 @@ def happiness_pipeline():
     logger.info("Pipeline started")
 
     merged_df = load_and_merge_data()
-    logger.info(f"Task 1 complete. Total rows loaded: {len(merged_df)}")
 
+    stats = compute_statistics(merged_df)
+
+    logger.info("Task 2 complete")
 
 if __name__ == "__main__":
     happiness_pipeline()
