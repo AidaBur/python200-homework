@@ -5,6 +5,7 @@ import pandas as pd
 from prefect import task, flow, get_run_logger
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy import stats
 
 @task(retries=3, retry_delay_seconds=2)
 def load_and_merge_data():
@@ -147,6 +148,93 @@ def create_visualizations(df):
     plt.close()
     logger.info(f"Saved correlation heatmap to {heatmap_path}")
 
+@task
+def hypothesis_testing(df):
+    logger = get_run_logger()
+
+    df = df.copy()
+    df["happiness_score"] = df["Happiness score"].fillna(df["Ladder score"])
+
+    # --- Test 1 ---
+    data_2019 = df[df["year"] == 2019]["happiness_score"].dropna()
+    data_2020 = df[df["year"] == 2020]["happiness_score"].dropna()
+
+    t_stat, p_value = stats.ttest_ind(data_2019, data_2020)
+
+    logger.info(f"2019 mean happiness: {data_2019.mean()}")
+    logger.info(f"2020 mean happiness: {data_2020.mean()}")
+    logger.info(f"T-statistic: {t_stat}")
+    logger.info(f"P-value: {p_value}")
+
+    if p_value < 0.05:
+        logger.info("Significant difference between 2019 and 2020.")
+    else:
+        logger.info("No significant difference between 2019 and 2020.")
+
+    # --- Test 2 ---
+    europe = df[df["Regional indicator"] == "Western Europe"]["happiness_score"].dropna()
+    africa = df[df["Regional indicator"] == "Sub-Saharan Africa"]["happiness_score"].dropna()
+
+    t_stat2, p_value2 = stats.ttest_ind(europe, africa)
+
+    logger.info(f"Western Europe mean: {europe.mean()}")
+    logger.info(f"Sub-Saharan Africa mean: {africa.mean()}")
+    logger.info(f"T-statistic (regions): {t_stat2}")
+    logger.info(f"P-value (regions): {p_value2}")
+
+@task
+def correlation_analysis(df):
+    logger = get_run_logger()
+
+    df = df.copy()
+
+    # unify happiness score
+    df["happiness_score"] = df["Happiness score"].fillna(df["Ladder score"])
+
+    # select numeric columns
+    numeric_df = df.select_dtypes(include="number")
+
+    # exclude target and year
+    features = [
+        col for col in numeric_df.columns
+        if col not in ["happiness_score", "year"]
+    ]
+
+    results = []
+
+    for col in features:
+        x = df[col].dropna()
+        y = df["happiness_score"].dropna()
+
+        # align lengths 
+        combined = df[[col, "happiness_score"]].dropna()
+
+        corr, p_val = stats.pearsonr(
+            combined[col],
+            combined["happiness_score"]
+        )
+
+        results.append((col, corr, p_val))
+
+        logger.info(f"{col}: corr={corr}, p-value={p_val}")
+
+    # correction
+    num_tests = len(results)
+    adjusted_alpha = 0.05 / num_tests
+
+    logger.info(f"Number of tests: {num_tests}")
+    logger.info(f"Adjusted alpha: {adjusted_alpha}")
+
+    for col, corr, p_val in results:
+        significant_original = p_val < 0.05
+        significant_adjusted = p_val < adjusted_alpha
+
+        logger.info(
+            f"{col} → corr={corr:.3f}, p={p_val:.5f}, "
+            f"significant@0.05={significant_original}, "
+            f"significant@adjusted={significant_adjusted}"
+        )
+
 @flow
 def happiness_pipeline():
     logger = get_run_logger()
@@ -159,6 +247,12 @@ def happiness_pipeline():
 
     create_visualizations(merged_df)
     logger.info("Task 3 complete")
+
+    hypothesis_testing(merged_df)
+    logger.info("Task 4 complete")
+
+    correlation_analysis(merged_df)
+    logger.info("Task 5 complete")
 
 if __name__ == "__main__":
     happiness_pipeline()
