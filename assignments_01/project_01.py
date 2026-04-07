@@ -1,8 +1,10 @@
 from pathlib import Path
+from venv import logger
 
 import pandas as pd
 from prefect import task, flow, get_run_logger
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 @task(retries=3, retry_delay_seconds=2)
 def load_and_merge_data():
@@ -87,6 +89,64 @@ def compute_statistics(df):
         "std": std_val
     }
 
+@task
+def create_visualizations(df):
+    logger = get_run_logger()
+
+    base_dir = Path(__file__).resolve().parents[1]
+    output_dir = base_dir / "assignments_01" / "outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    df = df.copy()
+
+    # Create unified happiness score
+    df["happiness_score"] = df["Happiness score"].fillna(df["Ladder score"])
+
+    # 1. Histogram of happiness scores
+    plt.figure(figsize=(8, 5))
+    plt.hist(df["happiness_score"].dropna(), bins=20)
+    plt.title("Distribution of Happiness Scores")
+    plt.xlabel("Happiness Score")
+    plt.ylabel("Frequency")
+    histogram_path = output_dir / "happiness_histogram.png"
+    plt.savefig(histogram_path)
+    plt.close()
+    logger.info(f"Saved histogram to {histogram_path}")
+
+    # 2. Boxplot of happiness scores by year
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(data=df, x="year", y="happiness_score")
+    plt.title("Happiness Score by Year")
+    plt.xlabel("Year")
+    plt.ylabel("Happiness Score")
+    boxplot_path = output_dir / "happiness_by_year.png"
+    plt.savefig(boxplot_path)
+    plt.close()
+    logger.info(f"Saved boxplot by year to {boxplot_path}")
+
+    # 3. Scatter plot of GDP per capita vs happiness score
+    plt.figure(figsize=(8, 5))
+    plt.scatter(df["GDP per capita"], df["happiness_score"])
+    plt.title("GDP per Capita vs Happiness Score")
+    plt.xlabel("GDP per Capita")
+    plt.ylabel("Happiness Score")
+    scatter_path = output_dir / "gdp_vs_happiness.png"
+    plt.savefig(scatter_path)
+    plt.close()
+    logger.info(f"Saved GDP vs happiness scatter plot to {scatter_path}")
+
+    # 4. Correlation heatmap
+    numeric_df = df.select_dtypes(include="number")
+    corr_matrix = numeric_df.corr()
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(corr_matrix, annot=True)
+    plt.title("Correlation Heatmap")
+    heatmap_path = output_dir / "correlation_heatmap.png"
+    plt.savefig(heatmap_path)
+    plt.close()
+    logger.info(f"Saved correlation heatmap to {heatmap_path}")
+
 @flow
 def happiness_pipeline():
     logger = get_run_logger()
@@ -95,8 +155,10 @@ def happiness_pipeline():
     merged_df = load_and_merge_data()
 
     stats = compute_statistics(merged_df)
-
     logger.info("Task 2 complete")
+
+    create_visualizations(merged_df)
+    logger.info("Task 3 complete")
 
 if __name__ == "__main__":
     happiness_pipeline()
