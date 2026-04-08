@@ -234,6 +234,80 @@ def correlation_analysis(df):
             f"significant@0.05={significant_original}, "
             f"significant@adjusted={significant_adjusted}"
         )
+@task
+def summary_report(df):
+    logger = get_run_logger()
+
+    df = df.copy()
+
+    # unify happiness score
+    df["happiness_score"] = df["Happiness score"].fillna(df["Ladder score"])
+
+    # Total countries and years 
+    num_countries = df["Country"].nunique()
+    num_years = df["year"].nunique()
+
+    logger.info(f"Dataset contains {num_countries} countries across {num_years} years.")
+
+    # Top and bottom regions
+    region_avg = df.groupby("Regional indicator")["happiness_score"].mean()
+
+    top_3 = region_avg.sort_values(ascending=False).head(3)
+    bottom_3 = region_avg.sort_values().head(3)
+
+    logger.info(f"Top 3 regions by happiness:\n{top_3}")
+    logger.info(f"Bottom 3 regions by happiness:\n{bottom_3}")
+
+    # t-test (2019 vs 2020)
+    data_2019 = df[df["year"] == 2019]["happiness_score"].dropna()
+    data_2020 = df[df["year"] == 2020]["happiness_score"].dropna()
+
+    t_stat, p_value = stats.ttest_ind(data_2019, data_2020)
+
+    if p_value < 0.05:
+        logger.info(
+            "Happiness scores changed significantly from 2019 to 2020, suggesting the pandemic may have had an impact."
+        )
+    else:
+        logger.info(
+            "No statistically significant change in happiness scores from 2019 to 2020 was detected, suggesting the pandemic did not have a measurable global effect in this dataset."
+        )
+
+    # Correlation with Bonferroni
+    numeric_df = df.select_dtypes(include="number")
+    features = [
+        col for col in numeric_df.columns
+        if col not in ["happiness_score", "year"]
+    ]
+
+    results = []
+
+    for col in features:
+        combined = df[[col, "happiness_score"]].dropna()
+
+        corr, p_val = stats.pearsonr(
+            combined[col],
+            combined["happiness_score"]
+        )
+
+        results.append((col, corr, p_val))
+
+    # Bonferroni
+    adjusted_alpha = 0.05 / len(results)
+
+    significant = [
+        (col, corr)
+        for col, corr, p_val in results
+        if p_val < adjusted_alpha
+    ]
+
+    if significant:
+        strongest = max(significant, key=lambda x: abs(x[1]))
+        logger.info(
+            f"The strongest variable correlated with happiness is '{strongest[0]}' with correlation {strongest[1]:.3f} after Bonferroni correction."
+        )
+    else:
+        logger.info("No variables remained significant after Bonferroni correction.")
 
 @flow
 def happiness_pipeline():
@@ -253,6 +327,9 @@ def happiness_pipeline():
 
     correlation_analysis(merged_df)
     logger.info("Task 5 complete")
+
+    summary_report(merged_df)
+    logger.info("Task 6 complete")
 
 if __name__ == "__main__":
     happiness_pipeline()
