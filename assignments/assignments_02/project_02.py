@@ -1,7 +1,15 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 
-# Load dataset
+# Pre-preprocessing:
+# The CSV file uses a semicolon (;) as a separator instead of a comma,
+# so we must pass sep=";" to pd.read_csv().
+
+# --- Task 1: Load and Explore ---
+
 df = pd.read_csv("student_performance_math.csv", sep=";")
 
 print("Shape:", df.shape)
@@ -10,23 +18,27 @@ print(df.dtypes)
 
 # Histogram
 plt.hist(df["G3"], bins=21)
-
 plt.title("Distribution of Final Math Grades")
 plt.xlabel("Grade")
 plt.ylabel("Count")
-
 plt.savefig("outputs/g3_distribution.png")
 
+# Comment:
+# The histogram shows a group of students with G3 = 0,
+# which represents students who did not take the final exam.
 
-# Task 2 
+# --- Task 2: Preprocess the Data ---
 
-# Remove G3 = 0
 df_clean = df[df["G3"] > 0]
 
 print("Original shape:", df.shape)
 print("Filtered shape:", df_clean.shape)
 
-# Convert yes/no
+# Comment:
+# We remove G3 = 0 because these students did not take the exam.
+# Keeping them would distort the model since 0 is not a real grade.
+
+# Convert yes/no to 1/0
 yes_no_cols = ["schoolsup", "internet", "higher", "activities"]
 
 for col in yes_no_cols:
@@ -35,69 +47,64 @@ for col in yes_no_cols:
 # Convert sex
 df_clean["sex"] = df_clean["sex"].map({"F": 0, "M": 1})
 
-# Correlation check
+# Correlation comparison
 print("Correlation before filtering:", df["absences"].corr(df["G3"]))
 print("Correlation after filtering:", df_clean["absences"].corr(df_clean["G3"]))
 
-# Task 3
+# Comment:
+# Before filtering, students with G3=0 had high absences,
+# which distorted the relationship.
+# After filtering, absences show a clearer negative relationship with grades.
 
-import matplotlib.pyplot as plt
+# --- Task 3: EDA ---
 
-# 1. Correlations with G3
 numeric_cols = df_clean.select_dtypes(include=["int64", "float64"])
-
 correlations = numeric_cols.corr()["G3"].sort_values()
 
 print("\nCorrelations with G3:")
 print(correlations)
 
+# Comment:
+# Failures have the strongest negative correlation with G3.
+# Study time and parents' education show positive relationships.
+# G1 and G2 have very strong correlation with G3.
 
-# 2. Plot 1: Failures vs G3
+# Plot 1
 plt.figure()
-
 plt.scatter(df_clean["failures"], df_clean["G3"])
 plt.title("Failures vs G3")
 plt.xlabel("Failures")
 plt.ylabel("Final Grade")
-
 plt.savefig("outputs/failures_vs_g3.png")
 
+# Comment:
+# Students with more past failures tend to have lower grades.
 
-# 3. Plot 2: Studytime vs G3
+# Plot 2
 plt.figure()
-
 plt.scatter(df_clean["studytime"], df_clean["G3"])
 plt.title("Study Time vs G3")
 plt.xlabel("Study Time")
 plt.ylabel("Final Grade")
-
 plt.savefig("outputs/studytime_vs_g3.png")
 
-# Task 4
+# Comment:
+# More study time is associated with slightly higher grades.
 
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-import numpy as np
+# --- Task 4: Baseline Model ---
 
-# Feature and target
 X = df_clean[["failures"]].values
 y = df_clean["G3"].values
 
-# Split
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=42
+    X, y, test_size=0.2, random_state=42
 )
 
-# Model
 model = LinearRegression()
 model.fit(X_train, y_train)
 
-# Predictions
 y_pred = model.predict(X_test)
 
-# Metrics
 rmse = np.sqrt(np.mean((y_pred - y_test) ** 2))
 r2 = model.score(X_test, y_test)
 
@@ -106,7 +113,12 @@ print("Slope:", model.coef_[0])
 print("RMSE:", rmse)
 print("R^2:", r2)
 
-# Task 5
+# Comment:
+# The model using only failures performs poorly.
+# R² is very low, meaning failures alone cannot explain student performance well.
+# RMSE (~3) means predictions are off by about 3 points on a 0–20 scale.
+
+# --- Task 5: Full Model ---
 
 feature_cols = [
     "failures", "Medu", "Fedu", "studytime",
@@ -117,18 +129,13 @@ feature_cols = [
 X = df_clean[feature_cols].values
 y = df_clean["G3"].values
 
-# Split
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=42
+    X, y, test_size=0.2, random_state=42
 )
 
-# Model
 model = LinearRegression()
 model.fit(X_train, y_train)
 
-# Metrics
 train_r2 = model.score(X_train, y_train)
 test_r2 = model.score(X_test, y_test)
 
@@ -140,40 +147,50 @@ print("Train R^2:", train_r2)
 print("Test R^2:", test_r2)
 print("RMSE:", rmse)
 
-# Coefficients
 print("\nFeature coefficients:")
 for name, coef in zip(feature_cols, model.coef_):
     print(f"{name:12s}: {coef:+.3f}")
 
-# Final Comment:
-# The full model performs better than the baseline but still has limited predictive power.
+# Comment:
+# The full model performs better than the baseline.
 # Train and test R² are close, indicating no overfitting.
-# Failures have a strong negative impact on grades.
-# Study time, internet access, and intention to pursue higher education positively affect performance.
-# The negative coefficient for school support likely reflects that struggling students are more likely to receive help.
+# Failures strongly decrease grades.
+# Study time and internet access improve performance.
+# The negative schoolsup coefficient likely reflects that struggling students receive extra support.
 
-# Task 6
-
-import matplotlib.pyplot as plt
-
-y_pred = model.predict(X_test)
+# --- Task 6: Evaluation Plot ---
 
 plt.figure()
 plt.scatter(y_pred, y_test)
-
-# diagonal line
-plt.plot(
-    [y_test.min(), y_test.max()],
-    [y_test.min(), y_test.max()]
-)
-
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()])
 plt.title("Predicted vs Actual (Full Model)")
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
-
 plt.savefig("outputs/predicted_vs_actual.png")
 
 # Comment:
 # Points close to the diagonal indicate accurate predictions.
-# Points above the line mean the actual value is higher than predicted.
-# Points below the line mean the model overestimated the value.
+
+# --- FINAL REQUIRED STEP
+
+feature_cols_with_g1 = feature_cols + ["G1"]
+
+X = df_clean[feature_cols_with_g1].values
+y = df_clean["G3"].values
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+test_r2_g1 = model.score(X_test, y_test)
+
+print("\nModel with G1:")
+print("Test R^2:", test_r2_g1)
+
+# Comment:
+# Adding G1 dramatically increases R² because previous grades strongly predict final grades.
+# However, this does not mean G1 causes G3 — it is simply a very strong indicator.
+# This model is less useful for early intervention, since G1 is already a later-stage outcome.
