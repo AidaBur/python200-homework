@@ -1,8 +1,11 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+
+os.makedirs("outputs", exist_ok=True)
 
 # Pre-preprocessing:
 # This dataset is separated by semicolons, not commas.
@@ -175,8 +178,6 @@ plt.savefig("outputs/predicted_vs_actual.png")
 # The errors appear spread across both low and high grades instead of clustering
 # only at one end, so the model does not seem to struggle only with low grades
 # or only with high grades.
-
-plt.savefig("outputs/predicted_vs_actual.png")
 
 # --- Neglected Feature: The Power of G1 ---
 
