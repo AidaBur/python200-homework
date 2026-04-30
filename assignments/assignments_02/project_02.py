@@ -219,9 +219,10 @@ print("Test R^2:", test_r2_g1)
 
 # --- Final Summary ---
 # The original dataset has 395 students. After filtering out students with G3 = 0,
-# the dataset has 357 students. I removed those rows because a final grade of 0
-# most likely means the student did not take the final exam, rather than earning
-# a real score of 0.
+# the dataset has 357 students. With an 80/20 train-test split, the test set has
+# 72 students. I removed the G3 = 0 rows because a final grade of 0 most likely
+# means the student did not take the final exam, rather than earning a real score of 0.
+
 #
 # RMSE tells us the average size of the model's prediction error.
 # Since G3 is measured on a 0-20 scale, an RMSE around 3 means the model's
@@ -231,6 +232,12 @@ print("Test R^2:", test_r2_g1)
 # A low R^2 means the model does not explain student grades very well.
 # A higher R^2 means the model captures more of the patterns in the data.
 #
+# The best model is the model that includes G1. Its test R^2 is about 0.75.
+# In plain language, this means the model explains about 75% of the variation
+# in final grades on the test set. This is much higher than the full model
+# without G1 because first-period grades are closely related to final grades.
+
+
 # In the full model, the largest positive coefficient is higher.
 # This means students who want to pursue higher education tend to have higher
 # final grades, holding the other model features constant.
@@ -244,4 +251,11 @@ print("Test R^2:", test_r2_g1)
 # For example, a feature with a positive coefficient may be connected to other
 # advantages in a student's life, and school support may have a negative coefficient
 # because struggling students are more likely to receive extra support.
+
+#
+# One surprising result is that schoolsup has a negative coefficient.
+# At first, I expected school support to be linked with higher grades.
+# A likely explanation is that students who receive school support may already
+# be struggling, so this feature reflects existing academic difficulty rather
+# than support causing lower grades.
 
