@@ -5,8 +5,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
 # Pre-preprocessing:
-# The CSV file uses a semicolon (;) as a separator instead of a comma,
-# so we must pass sep=";" to pd.read_csv().
+# This dataset is separated by semicolons, not commas.
+# Because of that, I need to use sep=";" when reading the CSV file.
 
 # --- Task 1: Load and Explore ---
 
@@ -171,7 +171,7 @@ plt.savefig("outputs/predicted_vs_actual.png")
 # Comment:
 # Points close to the diagonal indicate accurate predictions.
 
-# --- FINAL REQUIRED STEP
+# --- Neglected Feature: The Power of G1 ---
 
 feature_cols_with_g1 = feature_cols + ["G1"]
 
@@ -191,6 +191,36 @@ print("\nModel with G1:")
 print("Test R^2:", test_r2_g1)
 
 # Comment:
-# Adding G1 dramatically increases R² because previous grades strongly predict final grades.
-# However, this does not mean G1 causes G3 — it is simply a very strong indicator.
-# This model is less useful for early intervention, since G1 is already a later-stage outcome.
+# Adding G1 dramatically increases R² because G1 is the student's first-period grade.
+# Since G1 and G3 are both grades for the same student in the same class,
+# they are very strongly related.
+#
+# This does not mean G1 causes G3. It means G1 is a strong predictor of G3.
+# A student who performs well early in the course is likely to perform well later,
+# but the model does not prove that the earlier grade directly caused the final grade.
+
+
+# --- Final Summary ---
+# The original dataset has 395 students. After filtering out students with G3 = 0,
+# the dataset has 357 students. I removed those rows because a final grade of 0
+# most likely means the student did not take the final exam, rather than earning
+# a real score of 0.
+#
+# RMSE tells us the average size of the model's prediction error.
+# Since G3 is measured on a 0-20 scale, an RMSE around 3 means the model's
+# predictions are usually off by about 3 grade points.
+#
+# R² tells us how much of the variation in final grades the model explains.
+# A low R² means the model does not explain student grades very well.
+# A higher R² means the model captures more of the patterns in the data.
+#
+# In the full model, the strongest negative coefficient is failures.
+# This means students with more past class failures tend to have lower final grades.
+# The strongest positive coefficients in the printed model output show which
+# features are most associated with higher final grades.
+#
+# However, these coefficients show relationships, not definite causes.
+# For example, a feature with a positive coefficient may be connected to other
+# advantages in a student's life, and school support may have a negative coefficient
+# because struggling students are more likely to receive extra support.
+
