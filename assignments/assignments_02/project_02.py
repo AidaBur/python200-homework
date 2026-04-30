@@ -169,7 +169,14 @@ plt.ylabel("Actual")
 plt.savefig("outputs/predicted_vs_actual.png")
 
 # Comment:
-# Points close to the diagonal indicate accurate predictions.
+# Points close to the diagonal line mean the model predicted the grade accurately.
+# Points above the diagonal mean the model overpredicted the student's grade.
+# Points below the diagonal mean the model underpredicted the student's grade.
+# The errors appear spread across both low and high grades instead of clustering
+# only at one end, so the model does not seem to struggle only with low grades
+# or only with high grades.
+
+plt.savefig("outputs/predicted_vs_actual.png")
 
 # --- Neglected Feature: The Power of G1 ---
 
@@ -198,6 +205,12 @@ print("Test R^2:", test_r2_g1)
 # This does not mean G1 causes G3. It means G1 is a strong predictor of G3.
 # A student who performs well early in the course is likely to perform well later,
 # but the model does not prove that the earlier grade directly caused the final grade.
+#
+# A model that relies on G1 can help flag students after the first-period grade
+# is available, but it is less useful for very early intervention.
+# To intervene before G1 exists, educators would need earlier information such as
+# absences, past failures, study time, school support, family background, or
+# earlier diagnostic assessments collected before the first grading period.
 
 
 # --- Final Summary ---
@@ -214,10 +227,14 @@ print("Test R^2:", test_r2_g1)
 # A low R² means the model does not explain student grades very well.
 # A higher R² means the model captures more of the patterns in the data.
 #
-# In the full model, the strongest negative coefficient is failures.
-# This means students with more past class failures tend to have lower final grades.
-# The strongest positive coefficients in the printed model output show which
-# features are most associated with higher final grades.
+# In the full model, the largest positive coefficient is higher.
+# This means students who want to pursue higher education tend to have higher
+# final grades, holding the other model features constant.
+#
+# The largest negative coefficient is failures, making it the strongest negative
+# predictor in this model. This means students with more past class failures
+# tend to have lower final grades, holding the other model features constant.
+
 #
 # However, these coefficients show relationships, not definite causes.
 # For example, a feature with a positive coefficient may be connected to other
