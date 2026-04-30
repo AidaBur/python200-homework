@@ -1,8 +1,9 @@
 # --- scikit-learn API ---
 # Q1
-
+import os
 import numpy as np
 from sklearn.linear_model import LinearRegression
+os.makedirs("outputs", exist_ok=True)
 
 years = np.array([1, 2, 3, 5, 7, 10]).reshape(-1, 1)
 salary = np.array([45000, 50000, 60000, 75000, 90000, 120000])
@@ -57,7 +58,8 @@ plt.scatter(X_clusters[:, 0], X_clusters[:, 1], c=labels)
 plt.scatter(
     kmeans.cluster_centers_[:, 0],
     kmeans.cluster_centers_[:, 1],
-    marker='x'
+    marker='x',
+    color="black"
 )
 
 plt.title("KMeans Clusters")
@@ -76,7 +78,6 @@ plt.savefig("outputs/kmeans_clusters.png")
 import os
 from sklearn.model_selection import train_test_split
 
-os.makedirs("outputs", exist_ok=True)
 
 np.random.seed(42)
 num_patients = 100

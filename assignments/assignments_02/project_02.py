@@ -32,7 +32,7 @@ plt.savefig("outputs/g3_distribution.png")
 
 # --- Task 2: Preprocess the Data ---
 
-df_clean = df[df["G3"] > 0]
+df_clean = df[df["G3"] > 0].copy()
 
 print("Original shape:", df.shape)
 print("Filtered shape:", df_clean.shape)
@@ -118,8 +118,8 @@ print("R^2:", r2)
 
 # Comment:
 # The model using only failures performs poorly.
-# R² is very low, meaning failures alone cannot explain student performance well.
-# RMSE (~3) means predictions are off by about 3 points on a 0–20 scale.
+# R^2 is very low, meaning failures alone cannot explain student performance well.
+# RMSE (~3) means predictions are off by about 3 points on a 0-20 scale.
 
 # --- Task 5: Full Model ---
 
@@ -173,11 +173,14 @@ plt.savefig("outputs/predicted_vs_actual.png")
 
 # Comment:
 # Points close to the diagonal line mean the model predicted the grade accurately.
-# Points above the diagonal mean the model overpredicted the student's grade.
-# Points below the diagonal mean the model underpredicted the student's grade.
+# Points above the diagonal mean the actual grade was higher than predicted,
+# so the model underpredicted the student's grade.
+# Points below the diagonal mean the actual grade was lower than predicted,
+# so the model overpredicted the student's grade.
 # The errors appear spread across both low and high grades instead of clustering
 # only at one end, so the model does not seem to struggle only with low grades
 # or only with high grades.
+
 
 # --- Neglected Feature: The Power of G1 ---
 
@@ -224,9 +227,9 @@ print("Test R^2:", test_r2_g1)
 # Since G3 is measured on a 0-20 scale, an RMSE around 3 means the model's
 # predictions are usually off by about 3 grade points.
 #
-# R² tells us how much of the variation in final grades the model explains.
-# A low R² means the model does not explain student grades very well.
-# A higher R² means the model captures more of the patterns in the data.
+# R^2 tells us how much of the variation in final grades the model explains.
+# A low R^2 means the model does not explain student grades very well.
+# A higher R^2 means the model captures more of the patterns in the data.
 #
 # In the full model, the largest positive coefficient is higher.
 # This means students who want to pursue higher education tend to have higher
